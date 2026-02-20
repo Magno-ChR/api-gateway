@@ -1,0 +1,17 @@
+@api_gateway_dp_HostAddress = http://localhost:5200
+
+GET {{api_gateway_dp_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
+
+# YARP: /auth/* se reenvía a localhost:123 (PathPrefix -/auth). POST /auth/login => backend /login
+POST {{api_gateway_dp_HostAddress}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "miUsuario",
+  "password": "miPassword"
+}
+
+###
