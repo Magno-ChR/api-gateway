@@ -47,7 +47,7 @@ public class PollyForwarderHttpClientFactory : IForwarderHttpClientFactory
             .WaitAndRetryAsync(
                 2,
                 attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt)),
-                (_, _, attempt, _) => _logger.LogWarning("Reintento {Attempt} por error transitorio", attempt));
+                (_, _, attempt, _) => _logger.LogWarning("Retry {Attempt} due to transient error", attempt));
 
         var circuitBreaker = HttpPolicyExtensions
             .HandleTransientHttpError()
@@ -56,10 +56,10 @@ public class PollyForwarderHttpClientFactory : IForwarderHttpClientFactory
                 3,
                 TimeSpan.FromSeconds(15),
                 onBreak: (outcome, duration) =>
-                    _logger.LogWarning("Circuit breaker abierto por {Duration}s. Razón: {Reason}",
+                    _logger.LogWarning("Circuit breaker open for {Duration}s. Reason: {Reason}",
                         duration.TotalSeconds,
                         outcome.Exception?.Message ?? outcome.Result?.StatusCode.ToString()),
-                onReset: () => _logger.LogInformation("Circuit breaker cerrado. Reintentando llamadas."));
+                onReset: () => _logger.LogInformation("Circuit breaker closed. Retrying calls."));
 
         return Policy.WrapAsync(retry, circuitBreaker);
     }

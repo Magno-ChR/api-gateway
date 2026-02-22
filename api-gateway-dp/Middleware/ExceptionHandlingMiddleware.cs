@@ -21,7 +21,7 @@ public class ExceptionHandlingMiddleware
         }
         catch (Exception ex)
         {
-            Log.Error(ex, "Error no controlado en la petición {Path}", context.Request.Path);
+            Log.Error(ex, "Unhandled error on request {Path}", context.Request.Path);
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -33,7 +33,7 @@ public class ExceptionHandlingMiddleware
 
         var response = new
         {
-            error = "Error interno del servidor",
+            error = "Internal server error",
             message = exception.Message,
             statusCode = context.Response.StatusCode
         };

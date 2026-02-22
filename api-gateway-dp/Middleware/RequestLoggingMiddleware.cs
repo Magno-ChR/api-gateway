@@ -18,12 +18,12 @@ public class RequestLoggingMiddleware
         var path = context.Request.Path;
         var method = context.Request.Method;
 
-        Log.Debug("Inicio de petición: {Method} {Path}", method, path);
+        Log.Debug("Request started: {Method} {Path}", method, path);
 
         await _next(context);
 
         sw.Stop();
-        Log.Information("Petición completada: {Method} {Path} -> {StatusCode} en {ElapsedMs} ms",
+        Log.Information("Request completed: {Method} {Path} -> {StatusCode} in {ElapsedMs} ms",
             method, path, context.Response.StatusCode, sw.ElapsedMilliseconds);
     }
 }

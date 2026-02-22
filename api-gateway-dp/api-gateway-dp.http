@@ -1,17 +1,50 @@
-@api_gateway_dp_HostAddress = http://localhost:5200
+@gateway = http://localhost:5001
 
-GET {{api_gateway_dp_HostAddress}}/weatherforecast/
-Accept: application/json
 
-###
+# ========== Security API (backend: http://localhost:5000) ==========
 
-# YARP: /auth/* se reenvía a localhost:123 (PathPrefix -/auth). POST /auth/login => backend /login
-POST {{api_gateway_dp_HostAddress}}/auth/login
+# Authentications - Login
+POST {{gateway}}/api/Authentications
 Content-Type: application/json
 
 {
-  "username": "miUsuario",
-  "password": "miPassword"
+  "username": "Prueba",
+  "password": "1234"
 }
+
+###
+
+# Users - Crear usuario
+POST {{gateway}}/api/Users
+Content-Type: application/json
+
+{
+  "userName": "Admin",
+  "patientId": "3b1bcd29-318e-4f91-a864-936a75b06824",
+  "password": "1234",
+  "roleType": 0
+}
+
+###
+
+# Users - Asignar roles a un usuario
+POST {{gateway}}/api/Users/26a0d655-1c64-4082-a174-94313261a2ed/roles
+Content-Type: application/json
+
+{
+  "roleName": ""
+}
+
+###
+
+# Users - Obtener usuario por id
+GET {{gateway}}/api/Users/26a0d655-1c64-4082-a174-94313261a2ed
+
+###
+
+# Users - Listar usuarios (page=1, pageSize=10, search opcional)
+GET {{gateway}}/api/Users?page=1&pageSize=10
+# Con búsqueda: ?page=1&pageSize=10&search=Admin
+# GET {{gateway}}/api/Users?page=1&pageSize=10&search=Admin
 
 ###

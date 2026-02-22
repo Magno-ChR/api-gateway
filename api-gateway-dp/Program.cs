@@ -27,12 +27,12 @@ app.MapControllers();
 
 try
 {
-    Log.Information("Iniciando API Gateway");
+    Log.Information("Starting API Gateway");
     app.Run();
 }
 catch (Exception ex)
 {
-    Log.Fatal(ex, "La aplicación terminó inesperadamente");
+    Log.Fatal(ex, "Application terminated unexpectedly");
 }
 finally
 {
