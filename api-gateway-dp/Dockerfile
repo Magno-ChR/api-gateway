@@ -1,29 +1,28 @@
-# Consulte https://aka.ms/customizecontainer para aprender a personalizar su contenedor de depuración y cómo Visual Studio usa este Dockerfile para compilar sus imágenes para una depuración más rápida.
-
-# Esta fase se usa cuando se ejecuta desde VS en modo rápido (valor predeterminado para la configuración de depuración)
+# Fase base: imagen runtime
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
-USER $APP_UID
 WORKDIR /app
-EXPOSE 8080
-EXPOSE 8081
+EXPOSE 5001
+USER $APP_UID
 
-
-# Esta fase se usa para compilar el proyecto de servicio
+# Fase build: compilar la aplicación
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 ARG BUILD_CONFIGURATION=Release
 WORKDIR /src
-COPY ["api-gateway-dp/api-gateway-dp.csproj", "api-gateway-dp/"]
-RUN dotnet restore "./api-gateway-dp/api-gateway-dp.csproj"
-COPY . .
-WORKDIR "/src/api-gateway-dp"
-RUN dotnet build "./api-gateway-dp.csproj" -c $BUILD_CONFIGURATION -o /app/build
 
-# Esta fase se usa para publicar el proyecto de servicio que se copiará en la fase final.
+# Copiar solo el .csproj y restaurar (mejor uso de capas y caché)
+COPY ["api-gateway-dp.csproj", "."]
+RUN dotnet restore "api-gateway-dp.csproj"
+
+# Copiar el resto del código y compilar
+COPY . .
+RUN dotnet build "api-gateway-dp.csproj" -c $BUILD_CONFIGURATION -o /app/build
+
+# Fase publish: publicar para producción
 FROM build AS publish
 ARG BUILD_CONFIGURATION=Release
-RUN dotnet publish "./api-gateway-dp.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "api-gateway-dp.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p:UseAppHost=false
 
-# Esta fase se usa en producción o cuando se ejecuta desde VS en modo normal (valor predeterminado cuando no se usa la configuración de depuración)
+# Fase final: imagen de producción
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .

@@ -1,0 +1,42 @@
+services:
+  api-gateway:
+    image: geonmagno/api_gateway:0.1.0
+    container_name: api-gateway-dp
+    environment:
+      - ASPNETCORE_URLS=http://+:5001
+      - ReverseProxy__Clusters__security-api__Destinations__security-backend__Address=http://api-security:5000
+      - ReverseProxy__Clusters__patients-api__Destinations__patients-backend__Address=https://host.docker.internal:5002
+    ports:
+      - "5001:5001"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    container_name: postgres_patient
+    restart: always
+    environment:
+      POSTGRES_DB: "security"
+      POSTGRES_USER: "dp_db_user"
+      POSTGRES_PASSWORD: "DpG002"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api-security:
+    image: geonmagno/api_security:0.1.0
+    container_name: api-security
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=security;Username=dp_db_user;Password=DpG002;
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
