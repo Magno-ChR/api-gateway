@@ -7,6 +7,15 @@ builder.AddSerilogConfiguration();
 
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
+    });
+});
 builder.Services.AddYarpReverseProxy(builder.Configuration);
 
 var app = builder.Build();
@@ -14,6 +23,7 @@ var app = builder.Build();
 app.UseExceptionHandling();
 app.UseSerilogRequestLogging();
 app.UseRequestLogging();
+app.UseCors("AllowFrontend");
 
 if (app.Environment.IsDevelopment())
 {
