@@ -8,18 +8,15 @@ services:
       # Si corres el stack completo (mismo compose con api-security, api-patient, etc.), cambia a nombres de servicio (api-security:5000, api-patient:5003, etc.).
       - ReverseProxy__Clusters__security-api__Destinations__security-backend__Address=http://host.docker.internal:5001
       - ReverseProxy__Clusters__patients-api__Destinations__patients-backend__Address=http://host.docker.internal:5002
-      - ReverseProxy__Clusters__kitchen-api__Destinations__kitchen-backend__Address=http://host.docker.internal:5003
-      - ReverseProxy__Clusters__logistic-api__Destinations__logistic-backend__Address=http://host.docker.internal:5004
+      - ReverseProxy__Clusters__kitchen-api__Destinations__kitchen-backend__Address=http://host.docker.internal:5031
+      - ReverseProxy__Clusters__logistic-api__Destinations__logistic-backend__Address=http://host.docker.internal:5041
       - ReverseProxy__Clusters__plans-api__Destinations__plans-backend__Address=http://host.docker.internal:5005
-      - ReverseProxy__Clusters__calendar-api__Destinations__calendar-backend__Address=http://host.docker.internal:5006
+      - ReverseProxy__Clusters__calendar-api__Destinations__calendar-backend__Address=http://host.docker.internal:7020
     ports:
       - "5000:5000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: unless-stopped
     networks:
-      - nutricenter_net
+      - shared-network
 
-networks:
-  nutricenter_net:
-    driver: bridge
