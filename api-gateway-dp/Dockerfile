@@ -1,7 +1,7 @@
 # Fase base: imagen runtime
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS base
 WORKDIR /app
-EXPOSE 5001
+EXPOSE 5000
 USER $APP_UID
 
 # Fase build: compilar la aplicación

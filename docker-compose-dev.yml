@@ -1,0 +1,45 @@
+# Sustitución de entorno: INFRA_HOST (GitHub Actions → secrets.INFRA_HOST).
+# OTLP :4317, Loki :3100, Consul :8500 en ese host. RabbitMQ no aplica al gateway.
+
+services:
+  api-gateway:
+    build:
+      context: ./api-gateway-dp
+      dockerfile: Dockerfile
+    image: api-gateway:dev
+    container_name: api-gateway
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: "http://0.0.0.0:5000"
+      Telemetry__ServiceName: api-gateway
+      Telemetry__OtlpEndpoint: http://${INFRA_HOST}:4317
+      Loki__Uri: http://${INFRA_HOST}:3100
+      Consul__Host: http://${INFRA_HOST}:8500
+      Consul__ServiceName: api-gateway
+      Consul__ServiceAddress: "167.71.109.119"
+      Consul__ServicePort: "5000"
+      ConsulDiscovery__Enabled: "true"
+      ConsulDiscovery__RefreshSeconds: "30"
+      ConsulDiscovery__Clusters__security-api: api-security
+      ConsulDiscovery__Clusters__patients-api: api-patient
+      ConsulDiscovery__Clusters__kitchen-api: ms-kitchen
+      ConsulDiscovery__Clusters__logistic-api: ms-logistic
+      ConsulDiscovery__Clusters__calendar-api: calendario-webapi
+      ReverseProxy__Clusters__security-api__Destinations__security-backend__Address: http://api-security:5001
+      ReverseProxy__Clusters__patients-api__Destinations__patients-backend__Address: http://api-patient:5002
+      ReverseProxy__Clusters__kitchen-api__Destinations__kitchen-backend__Address: http://ms-kitchen:5005
+      ReverseProxy__Clusters__logistic-api__Destinations__logistic-backend__Address: http://ms-logistic:5006
+      ReverseProxy__Clusters__plans-api__Destinations__plans-backend__Address: http://host.docker.internal:5007
+      ReverseProxy__Clusters__calendar-api__Destinations__calendar-backend__Address: http://calendario-webapi:7020
+    ports:
+      - "5000:5000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - nutricenter_net
+
+networks:
+  nutricenter_net:
+    external: true
+    name: develop_nutricenter_net

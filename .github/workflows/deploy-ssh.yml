@@ -1,0 +1,110 @@
+name: Deploy SSH
+
+on:
+  push:
+    branches: [master]
+
+concurrency:
+  group: deploy-ssh-gateway-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Comprobar INFRA_HOST
+        run: |
+          if [ -z "${{ secrets.INFRA_HOST }}" ]; then
+            echo "::error::Define la variable del repositorio INFRA_HOST."
+            exit 1
+          fi
+
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Crear archivo de despliegue
+        run: git archive --format=tar.gz --output=deploy.tar.gz HEAD -- .
+
+      - name: Configurar SSH
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SSH_HOST}" ]; then
+            echo "::error::SSH_HOST está vacío."
+            exit 1
+          fi
+          if [ -z "${SSH_USER}" ]; then
+            echo "::error::SSH_USER está vacío."
+            exit 1
+          fi
+          if [ -z "${SSH_PRIVATE_KEY}" ]; then
+            echo "::error::SSH_PRIVATE_KEY está vacío."
+            exit 1
+          fi
+          if ! printf '%s\n' "$SSH_PRIVATE_KEY" | grep -qE '^-----BEGIN .+ PRIVATE KEY-----'; then
+            echo "::error::SSH_PRIVATE_KEY no parece una clave privada válida."
+            exit 1
+          fi
+          if ! printf '%s\n' "$SSH_PRIVATE_KEY" | grep -qE '^-----END .+ PRIVATE KEY-----'; then
+            echo "::error::SSH_PRIVATE_KEY parece truncada."
+            exit 1
+          fi
+          mkdir -p "$HOME/.ssh"
+          chmod 700 "$HOME/.ssh"
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > "$HOME/.ssh/id_ed25519"
+          chmod 600 "$HOME/.ssh/id_ed25519"
+          ssh-keyscan -H "$SSH_HOST" >> "$HOME/.ssh/known_hosts"
+          chmod 644 "$HOME/.ssh/known_hosts"
+
+      - name: Subir archivo al servidor
+        run: scp -o StrictHostKeyChecking=yes deploy.tar.gz "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/deploy-gateway.tar.gz"
+
+      - name: Desplegar vía SSH
+        env:
+          INFRA_HOST: ${{ secrets.INFRA_HOST }}
+        run: |
+          set -euo pipefail
+          ssh "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" "export INFRA_HOST='${INFRA_HOST}'; bash -se" <<'EOF'
+          set -euo pipefail
+          if [ -z "${INFRA_HOST}" ]; then
+            echo "::error::INFRA_HOST vacío en el servidor."
+            exit 1
+          fi
+          DEPLOY_DIR="${HOME}/api_gateway_dp"
+          mkdir -p "$DEPLOY_DIR"
+          cd "$DEPLOY_DIR"
+          tar xzf "${HOME}/deploy-gateway.tar.gz"
+          rm -f "${HOME}/deploy-gateway.tar.gz"
+          docker network create develop_nutricenter_net 2>/dev/null || true
+          docker compose -f "$DEPLOY_DIR/docker-compose-dev.yml" config >/dev/null
+          docker compose -f "$DEPLOY_DIR/docker-compose-dev.yml" up -d --build --remove-orphans
+          EOF
+
+      - name: Monitoreo post-release
+        run: |
+          set -euo pipefail
+          ssh "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" 'bash -se' <<'EOF'
+          set -uo pipefail
+          echo "=== Docker status ==="
+          docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          echo "=== Comprobación API Gateway ==="
+          health_ok=0
+          for i in $(seq 1 12); do
+            if curl -fsS --connect-timeout 3 "http://127.0.0.1:5000/health/live" >/dev/null 2>&1; then
+              health_ok=1
+              break
+            fi
+            echo "Intento ${i}/12: gateway no responde todavía, reintentando en 5s..."
+            sleep 5
+          done
+          if [ "$health_ok" -eq 1 ]; then
+            echo "Health OK en http://127.0.0.1:5000/health/live"
+          else
+            echo "::warning::No hubo respuesta HTTP estable en 12 intentos. Revisa logs."
+          fi
+          echo "=== API Gateway logs (tail 80) ==="
+          docker compose -f "${HOME}/api_gateway_dp/docker-compose-dev.yml" logs --tail 80 api-gateway || true
+          EOF
