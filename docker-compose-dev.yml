@@ -28,7 +28,7 @@ services:
       ConsulDiscovery__Clusters__calendar-api: calendario-webapi
       ReverseProxy__Clusters__security-api__Destinations__security-backend__Address: http://api-security:5001
       ReverseProxy__Clusters__patients-api__Destinations__patients-backend__Address: http://api-patient:5002
-      ReverseProxy__Clusters__kitchen-api__Destinations__kitchen-backend__Address: http://ms-kitchen-api:80
+      ReverseProxy__Clusters__kitchen-api__Destinations__kitchen-backend__Address: http://ms-kitchen-api:3000
       ReverseProxy__Clusters__logistic-api__Destinations__logistic-backend__Address: http://ms-logistic:5006
       ReverseProxy__Clusters__plans-api__Destinations__plans-backend__Address: http://host.docker.internal:5007
       ReverseProxy__Clusters__calendar-api__Destinations__calendar-backend__Address: http://calendario-webapi:7020
